@@ -1,0 +1,296 @@
+{
+	"info": {
+		"_postman_id": "d4625b8e-53f0-420a-aaf9-16264415aed6",
+		"name": "Postman Documentation Example API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "19573685"
+	},
+	"item": [
+		{
+			"name": "Add new image to gallery journey",
+			"item": [
+				{
+					"name": "01. Get secretParam from AWS Secrets Manager",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const address = \"http://localhost:40000/credentials.json\";\r",
+									"\r",
+									"pm.sendRequest(address, function (err, response) {\r",
+									"    let responseBody = response.text();\r",
+									"    if (responseBody && responseBody !== 'undefined') {\r",
+									"        console.log(responseBody);\r",
+									"        let jsonData = JSON.parse(responseBody);\r",
+									"        //Ypu may need to change the \"default\" element to something else, check your credentials file\r",
+									"        pm.environment.set(\"awsAccessKey\", jsonData[\"default\"][\"aws_access_key_id\"]);\r",
+									"        pm.environment.set(\"awsSecretKey\", jsonData[\"default\"][\"aws_secret_access_key\"]);\r",
+									"        pm.environment.set(\"awsSessionToken\", jsonData[\"default\"][\"aws_session_token\"]);\r",
+									"        console.log(\"Successfully set credentials as env variables\");\r",
+									"    } else {\r",
+									"        console.log(\"Problem with credentials response, is the server running?\")\r",
+									"    }\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Set credentials\", function() {\r",
+									"    pm.expect(pm.response.to.have.status(200));\r",
+									"    pm.expect(pm.response.json()).to.have.property(\"SecretString\");\r",
+									"    let jsonData = pm.response.json();\r",
+									"    pm.environment.set(\"awsRetrievedSecretValue\", jsonData.SecretString);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "awsv4",
+							"awsv4": [
+								{
+									"key": "region",
+									"value": "{{awsRegion}}",
+									"type": "string"
+								},
+								{
+									"key": "accessKey",
+									"value": "{{awsAccessKey}}",
+									"type": "string"
+								},
+								{
+									"key": "secretKey",
+									"value": "{{awsSecretKey}}",
+									"type": "string"
+								},
+								{
+									"key": "sessionToken",
+									"value": "{{awsSessionToken}}",
+									"type": "string"
+								},
+								{
+									"key": "service",
+									"value": "secretsmanager",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-amz-json-1.1",
+								"type": "text"
+							},
+							{
+								"key": "X-Amz-Target",
+								"value": "secretsmanager.GetSecretValue",
+								"type": "text"
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "identity",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"SecretId\": \"our/secret/id/in/aws/secrets/manager\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{secretsManagerUrl}}/GetSecretValue",
+							"host": [
+								"{{secretsManagerUrl}}"
+							],
+							"path": [
+								"GetSecretValue"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "02. Generate a new image using our advanced neural network",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Set response body\", function() {\r",
+									"    pm.expect(pm.response.to.have.status(200));\r",
+									"    pm.environment.set(\"generatedImageData\", pm.response);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Generation-Request-Id",
+								"value": "{{$guid}}",
+								"type": "text"
+							},
+							{
+								"key": "X-Request-Timestamp",
+								"value": "{{$timestamp}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/image",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"image"
+							],
+							"variable": [
+								{
+									"key": "secretParam",
+									"value": "{{awsRetrievedSecretValue}}",
+									"description": "(Required) Secret parameter, which is required to properly generate the data"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Expected response to a valid request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/image",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"image"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"id\": \"<long>\",\n  \"dataBase64\": \"<string>\",\n  \"metadata\": \"<string>\"\n}"
+						}
+					]
+				},
+				{
+					"name": "03. Add the generated image to our image gallery",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{{generatedImageData}}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/add-image?Content-Type=application/json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"add-image"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Created",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"value\": \"reference #/components/schema/Image not found in the OpenAPI spec\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/add-image",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"add-image"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/v1"
+		}
+	]
+}
